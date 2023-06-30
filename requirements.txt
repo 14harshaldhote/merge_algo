@@ -2,4 +2,5 @@
 #pip install roboflow
 #pip install flask
 #pip install flask-restful
+#pip install gunicorn
 #pip install --upgrade googletrans==4.0.0-rc1 (NOTE: you must upgrade google trans time by time)

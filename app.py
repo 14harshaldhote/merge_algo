@@ -1,18 +1,11 @@
-from roboflow import Roboflow
-import json
 from flask import Flask, request, jsonify
 from flask_restful import Resource, Api
 from googletrans import Translator
+from model_loader import modelClassification, modelIdentification
+from waitress import serve
+import os
+import uuid
 
-
-# Loading models
-rf1 = Roboflow(api_key="OMK13lODzeEz6X1NFfoF")
-project1 = rf1.workspace().project("leaf-classification-0gekz")
-modelClassification = project1.version(1).model
-
-rf2 = Roboflow(api_key="kVjiNm6VQczdBaSdhwOg")
-project2 = rf2.workspace().project("healthy_pest_disease")
-modelIdentification = project2.version(4).model
 
 #translator 
 def translate_text(text, target_language):
@@ -22,31 +15,66 @@ def translate_text(text, target_language):
 
 
 def get_classification_class(model, image_path):
-    # Call the model's predict method and get the output as a dictionary
-    output = model.predict(image_path, confidence=40, overlap=30).json()
+    try:
+        # Check if the image file exists
+        if not os.path.isfile(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+        
+        
+        # Call the model's predict method and get the output as a dictionary
+        output = model.predict(image_path, confidence=40, overlap=30).json()
+        print("image path in classification funciton : ", image_path)
+        # Get the value of the 'class' field from the output dictionary
+        class_value = output['predictions'][-1]['class']
 
-    # Get the value of the 'class' field from the output dictionary
-    class_value = output['predictions'][-1]['class']
+        # Generate a unique filename for saving the visualization image
+        filename = str(uuid.uuid4()) + '.jpg'
+        visualization_path = os.path.join("visualizations", filename)
 
-    # Visualize your prediction
-    model.predict(image_path, confidence=40, overlap=30).save("x.jpg")
+        # Visualize the prediction and save the image
+        model.predict(image_path, confidence=40, overlap=30).save(visualization_path)
 
-    # Return the value of the 'class' field
-    return class_value
+        # Return the classification class and visualization path
+        return class_value, visualization_path
+    except Exception as e:
+        # Handle the exception and return None
+        print(f"An error occurred in classifiaction : {str(e)}")
+        return None, None
 
 
 def get_identification_class(model, image_path):
-    # Call the model's predict method and get the output as a dictionary
-    output = model.predict(image_path, confidence=40, overlap=30).json()
-    print("output", output)
-    # Get the value of the 'class' field from the output dictionary
-    class_value = output['predictions'][-1]['class']
+    try:
+        # Check if the image file exists
+        if not os.path.isfile(image_path):
+            raise FileNotFoundError(f"Image file not found: {image_path}")
 
-    # Visualize your predictions
-    model.predict(image_path, confidence=40, overlap=30).save("z.jpg")
+        # Call the model's predict method and get the output as a dictionary
+        output = model.predict(image_path, confidence=40, overlap=30).json()
 
-    # Return the value of the 'class' field
-    return class_value
+        # Check if predictions array is empty
+        if 'predictions' in output and len(output['predictions']) > 0:
+            # Get the value of the 'class' field from the output dictionary
+            class_value = output['predictions'][-1]['class']
+        else:
+            # Set class_value as null if predictions array is empty
+            class_value = None
+
+        # Generate a unique filename for saving the visualization image
+        filename = str(uuid.uuid4()) + '.jpg'
+        visualization_path = os.path.join("visualizations", filename)
+        
+        # Visualize the predictions and save the image
+        model.predict(image_path, confidence=40, overlap=30).save(visualization_path)
+
+        # Delete the image files after use
+        delete_image_file(image_path)
+        
+        # Return the value of the 'class' field and visualization path
+        return class_value, visualization_path
+    except Exception as e:
+        # Handle the exception and return None
+        print(f"An error occurred in identification : {str(e)}")
+        return None, None
 
 
 def runapp(image_path):
@@ -54,26 +82,37 @@ def runapp(image_path):
     model1 = modelClassification
     model2 = modelIdentification
 
-    # Get the predicted class values
-    image_path2 = "x.jpg"
-
-    class1_value = get_classification_class(model1, image_path)
+    # Get the predicted class values and visualization paths
+    class1_value, visualization_path1 = get_classification_class(model1, image_path)
 
     if class1_value != 'healthy':
-        class2_value = get_identification_class(model2, image_path2)
+        class2_value, visualization_path2 = get_identification_class(model2, visualization_path1)
 
         # Print the predicted class values
         print("Classification class:", class1_value)
         print("Identification class:", class2_value)
-        return class2_value
+        if class2_value is None:
+            return class1_value, visualization_path1
+
+        return class2_value, visualization_path2
     else:
         # Print the predicted class values
         print("Classification class:", class1_value)
-        return class1_value
+        return class1_value, visualization_path1
 
 
-# Image_path = "6.jpg"
-# runapp(image_path)
+def delete_image_file(file_path):
+    try:
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            print("Deleted image file:", file_path)
+        else:
+            print("Image file not found:", file_path)
+    except Exception as e:
+        print(f"An error occurred while deleting image file {file_path}: {str(e)}")
+
+
+
 
 # API starting
 app = Flask(__name__)
@@ -91,13 +130,25 @@ class ImageUpload(Resource):
 
         try:
             # Code that may raise an exception
-            if image and image.filename.lower().endswith('.jpg'):
-                image.save("image.jpg")
-                image_path = "image.jpg"
-                res = runapp(image_path)
+            if image and image.filename.lower().endswith(('.jpg', '.png', '.jpeg')):
+                # Generate a unique filename for saving the image
+                filename = str(uuid.uuid4()) + '.jpg'
+                image_path = os.path.join("images", filename)
+                print("image_path :: ",image_path)
+                image.save(image_path)
+                print("image_path :: ",image_path)
+
+                res, visualization_path = runapp(image_path)
+                print("visualization_path :: ",visualization_path)
+
                 cause = "NULL"
                 prevention = "NULL"
                 solution = "NULL"
+
+                # Delete the image files after use
+                delete_image_file(image_path)
+                delete_image_file(visualization_path)
+
 
                 if res == "target spot":
                     cause = "Target spot, or Corynespora leaf spot, is a fungal disease affecting various crops like tomatoes, soybeans, and cotton. It is caused by the fungus Corynespora cassiicola."
@@ -131,53 +182,86 @@ class ImageUpload(Resource):
 
                 elif res == "healthy leaf":
                     return jsonify({'result': res, 'message': 'Your crop leaf is in healthy condition. However, to maintain this, ensure to follow the following practices'})
+                                   
+                elif res == "disease":
+                    return jsonify({'result': res, 'message': 'Your crop leaf is in disease condition.'})
+                
+                elif res is None:
+                    response = jsonify({'result': res, 'message': 'Please try other image'})
+                    response.status_code = 400
+                    return response
+
                 else:
                     return jsonify({'result': res, 'message': 'Your crop is in healthy condition. However, to maintain this, ensure to follow the following practices'})
                 return jsonify({'result': res, 'cause': cause, 'prevention': prevention, 'solution': solution})
             else:
-                return jsonify({'result': 'failure', 'message': 'Invalid file format'})
+                response= jsonify({'result': 'failure', 'message': 'Invalid file format'})
+                response.status_code = 400
+                return response 
             # ...
-        except ExceptionType as e:
+        except Exception as e:
             # Code to handle the exception
-            e="An exception occurred"
-            print(e)
+            error_message = "An exception occurred in Image Upload : " + str(e)
+            response = jsonify({'result': 'failure', 'message': error_message})
+            response.status_code = 500
+            return response 
+       
 
       
 class ImageUploadHindi(Resource):
     def post(self):
-        response = ImageUpload().post()
-        if response.status_code == 200:
-            response_data = response.get_json()
-            translated_response_data = {}
-            for key, value in response_data.items():
-                translated_response_data[key] = translate_text(value, 'hi')
-            return jsonify(translated_response_data)
-        else:
+        try:
+            response = ImageUpload().post()
+            if response.status_code == 200:
+                response_data = response.get_json()
+                translated_response_data = {}
+                for key, value in response_data.items():
+                    translated_response_data[key] = translate_text(value, 'hi')
+                return jsonify(translated_response_data)
+            else:
+                return response
+        except Exception as e:
+            error_message = "An exception occurred: " + str(e)
+            response = jsonify({'result': 'failure', 'message': error_message})
+            response.status_code == 500
             return response
-
+            
 class ImageUploadTamil(Resource):
     def post(self):
-        response = ImageUpload().post()
-        if response.status_code == 200:
-            response_data = response.get_json()
-            translated_response_data = {}
-            for key, value in response_data.items():
-                translated_response_data[key] = translate_text(value, 'ta')  # Change 'hi' to 'ta' for Tamil
-            return jsonify(translated_response_data)
-        else:
+        try:
+            response = ImageUpload().post()
+            if response.status_code == 200:
+                response_data = response.get_json()
+                translated_response_data = {}
+                for key, value in response_data.items():
+                    translated_response_data[key] = translate_text(value, 'ta')  # Change 'hi' to 'ta' for Tamil
+                return jsonify(translated_response_data)
+            else:
+                return response
+        except Exception as e:
+            error_message = "An exception occurred: " + str(e)
+            response = jsonify({'result': 'failure', 'message': error_message})
+            response.status_code == 500
             return response
 
 class ImageUploadFrench(Resource):
     def post(self):
-        response = ImageUpload().post()
-        if response.status_code == 200:
-            response_data = response.get_json()
-            translated_response_data = {}
-            for key, value in response_data.items():
-                translated_response_data[key] = translate_text(value, 'fr')  # Change 'hi' to 'fr' for French
-            return jsonify(translated_response_data)
-        else:
+        try:
+            response = ImageUpload().post()
+            if response.status_code == 200:
+                response_data = response.get_json()
+                translated_response_data = {}
+                for key, value in response_data.items():
+                    translated_response_data[key] = translate_text(value, 'fr')  # Change 'hi' to 'fr' for French
+                return jsonify(translated_response_data)
+            else:
+                return response
+        except Exception as e:
+            error_message = "An exception occurred: " + str(e)
+            response = jsonify({'result': 'failure', 'message': error_message})
+            response.status_code == 500
             return response
+
 
 api.add_resource(ImageUploadFrench, '/upload/french')
 
@@ -188,6 +272,9 @@ api.add_resource(ImageUploadHindi, '/upload/hindi')
 api.add_resource(ImageUpload, '/upload')
 
 if __name__ == '__main__':
-    port = 49999
-    app.run(debug=True, port=port)
+    port = 8001
+    serve(app, host='172.21.192.1', port=port)
+
+
+
 # API ending
