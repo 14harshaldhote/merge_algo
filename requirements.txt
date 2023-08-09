@@ -1,0 +1,19 @@
+#python=3.9
+#pip install roboflow
+#pip install flask
+#pip install flask-restful
+#pip install gunicorn
+#pip install --upgrade googletrans==4.0.0-rc1 (NOTE: you must upgrade google trans time by time)
+
+#python==3.9
+numpy==1.24.0
+Flask
+requests
+opencv-python-headless
+Pillow==8.3.2
+python-dotenv
+matplotlib==3.7.2
+gunicorn
+roboflow
+flask-restful
+googletrans==4.0.0-rc1 #(NOTE: you must upgrade google trans time by time)
