@@ -9,10 +9,12 @@ import os
 import uuid
 
 #translator 
-def translate_text(text, target_language):
-    translator = Translator()
-    translated_text = translator.translate(text, dest=target_language).text
-    return translated_text
+from flask import Flask, request, jsonify
+from flask_restful import Resource, Api
+from googletrans import Translator
+from model_loader import modelClassification, modelIdentification
+import os
+import uuid
 
 
 def get_classification_class(model, image_path):
@@ -39,7 +41,7 @@ def get_classification_class(model, image_path):
         return class_value, visualization_path
     except Exception as e:
         # Handle the exception and return None
-        print(f"Exception 1: An error occurred in classifiaction : {str(e)}")
+        print(f"An error occurred in classifiaction : {str(e)}")
         return None, None
 
 
@@ -74,7 +76,7 @@ def get_identification_class(model, image_path):
         return class_value, visualization_path
     except Exception as e:
         # Handle the exception and return None
-        print(f"Exception 2: An error occurred in identification : {str(e)}")
+        print(f"An error occurred in identification : {str(e)}")
         return None, None
 
 
@@ -110,7 +112,7 @@ def delete_image_file(file_path):
         else:
             print("Image file not found:", file_path)
     except Exception as e:
-        print(f"Exception 3: An error occurred while deleting image file {file_path}: {str(e)}")
+        print(f"An error occurred while deleting image file {file_path}: {str(e)}")
 
 
 
@@ -181,7 +183,7 @@ class ImageUpload(Resource):
                     prevention = "Farmers can prevent mosaic virus by using virus-free seeds or transplants, practicing strict sanitation measures, controlling insect vectors, and removing and destroying infected plants."
                     solution = "Unfortunately, there are no effective treatments for mosaic viruses once plants are infected. Therefore, prevention is crucial in managing this disease."
 
-                elif res == "Healthy leaf":
+                elif res == "healthy leaf":
                     return jsonify({'result': res, 'message': 'Your crop leaf is in healthy condition. However, to maintain this, ensure to follow the following practices'})
                                    
                 elif res == "disease":
@@ -194,6 +196,7 @@ class ImageUpload(Resource):
 
                 else:
                     return jsonify({'result': res, 'message': 'Your crop is in healthy condition. However, to maintain this, ensure to follow the following practices'})
+                
                 # return jsonify({'result': res, 'cause': cause, 'prevention': prevention, 'solution': solution})
                 return jsonify(
                     {
@@ -212,67 +215,155 @@ class ImageUpload(Resource):
             # ...
         except Exception as e:
             # Code to handle the exception
-            error_message = "Exception 4:An exception occurred in Image Upload : " + str(e)
+            error_message = "An exception occurred in Image Upload : " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response 
        
+def translate_json_values(json_data, target_language):
+    if isinstance(json_data, dict):
+        translated_data = {}
+        for key, value in json_data.items():
+            if isinstance(value, str):
+                translated_data[key] = translate_text(value, target_language)
+            else:
+                translated_data[key] = translate_json_values(value, target_language)
+        return translated_data
+    elif isinstance(json_data, list):
+        translated_data = []
+        for item in json_data:
+            translated_data.append(translate_json_values(item, target_language))
+        return translated_data
+    else:
+        return json_data
 
-      
+def translate_text(text, target_language):
+    translator = Translator()
+    translated_text = translator.translate(text, dest=target_language).text
+    return translated_text
+
+
 class ImageUploadHindi(Resource):
     def post(self):
         try:
             response = ImageUpload().post()
             if response.status_code == 200:
                 response_data = response.get_json()
-                translated_response_data = {}
-                for key, value in response_data.items():
-                    translated_response_data[key] = translate_text(value, 'hi')
+                translated_response_data = translate_json_values(response_data, 'hi')
                 return jsonify(translated_response_data)
             else:
                 return response
         except Exception as e:
-            error_message = "Exception 5:An exception occurred: " + str(e)
+            error_message = "An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
-            response.status_code == 500
+            response.status_code = 500
             return response
-            
+
+
+
 class ImageUploadTamil(Resource):
-    def post(self):
+     def post(self):
         try:
             response = ImageUpload().post()
             if response.status_code == 200:
                 response_data = response.get_json()
-                translated_response_data = {}
-                for key, value in response_data.items():
-                    translated_response_data[key] = translate_text(value, 'ta')  # Change 'hi' to 'ta' for Tamil
+                translated_response_data = translate_json_values(response_data, 'ta')
                 return jsonify(translated_response_data)
             else:
                 return response
         except Exception as e:
-            error_message = "Exception 6:An exception occurred: " + str(e)
+            error_message = "An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
-            response.status_code == 500
+            response.status_code = 500
             return response
 
 class ImageUploadFrench(Resource):
+     def post(self):
+        try:
+            response = ImageUpload().post()
+            if response.status_code == 200:
+                response_data = response.get_json()
+                translated_response_data = translate_json_values(response_data, 'fr')
+                return jsonify(translated_response_data)
+            else:
+                return response
+        except Exception as e:
+            error_message = "An exception occurred: " + str(e)
+            response = jsonify({'result': 'failure', 'message': error_message})
+            response.status_code = 500
+            return response
+
+class ImageUploadItalian(Resource):
     def post(self):
         try:
             response = ImageUpload().post()
             if response.status_code == 200:
                 response_data = response.get_json()
-                translated_response_data = {}
-                for key, value in response_data.items():
-                    translated_response_data[key] = translate_text(value, 'fr')  # Change 'hi' to 'fr' for French
+                translated_response_data = translate_json_values(response_data, 'it')
                 return jsonify(translated_response_data)
             else:
                 return response
         except Exception as e:
-            error_message = "Exception 7:An exception occurred: " + str(e)
+            error_message = "An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
-            response.status_code == 500
+            response.status_code = 500
             return response
 
+class ImageUploadKorean(Resource):
+    def post(self):
+        try:
+            response = ImageUpload().post()
+            if response.status_code == 200:
+                response_data = response.get_json()
+                translated_response_data = translate_json_values(response_data, 'ko')
+                return jsonify(translated_response_data)
+            else:
+                return response
+        except Exception as e:
+            error_message = "An exception occurred: " + str(e)
+            response = jsonify({'result': 'failure', 'message': error_message})
+            response.status_code = 500
+            return response
+        
+class ImageUploadMandarin(Resource):
+    def post(self):
+        try:
+            response = ImageUpload().post()
+            if response.status_code == 200:
+                response_data = response.get_json()
+                translated_response_data = translate_json_values(response_data, 'zh-cn')
+                return jsonify(translated_response_data)
+            else:
+                return response
+        except Exception as e:
+            error_message = "An exception occurred: " + str(e)
+            response = jsonify({'result': 'failure', 'message': error_message})
+            response.status_code = 500
+            return response
+
+class ImageUploadJapanese(Resource):
+    def post(self):
+        try:
+            response = ImageUpload().post()
+            if response.status_code == 200:
+                response_data = response.get_json()
+                translated_response_data = translate_json_values(response_data, 'ja')
+                return jsonify(translated_response_data)
+            else:
+                return response
+        except Exception as e:
+            error_message = "An exception occurred: " + str(e)
+            response = jsonify({'result': 'failure', 'message': error_message})
+            response.status_code = 500
+            return response
+        
+api.add_resource(ImageUploadJapanese, '/upload/japanese')
+
+api.add_resource(ImageUploadMandarin, '/upload/mandarin')
+
+api.add_resource(ImageUploadKorean, '/upload/korean')
+
+api.add_resource(ImageUploadItalian, '/upload/italian')
 
 api.add_resource(ImageUploadFrench, '/upload/french')
 
@@ -283,9 +374,8 @@ api.add_resource(ImageUploadHindi, '/upload/hindi')
 api.add_resource(ImageUpload, '/upload')
 
 if __name__ == '__main__':
-    
-    port = 49999
-    app.run(debug=True, port=port)
+    port = 8001
+    app.run(debug=False, port=port)
 #     # Set the appropriate host and port for your local server
 #     host = '192.168.43.66'  # or '127.0.0.1'
 #     port = 8080
