@@ -9,12 +9,6 @@ import os
 import uuid
 
 #translator 
-from flask import Flask, request, jsonify
-from flask_restful import Resource, Api
-from googletrans import Translator
-from model_loader import modelClassification, modelIdentification
-import os
-import uuid
 
 
 def get_classification_class(model, image_path):
@@ -41,7 +35,7 @@ def get_classification_class(model, image_path):
         return class_value, visualization_path
     except Exception as e:
         # Handle the exception and return None
-        print(f"An error occurred in classifiaction : {str(e)}")
+        print(f"Exception 1: An error occurred in classifiaction : {str(e)}")
         return None, None
 
 
@@ -76,7 +70,7 @@ def get_identification_class(model, image_path):
         return class_value, visualization_path
     except Exception as e:
         # Handle the exception and return None
-        print(f"An error occurred in identification : {str(e)}")
+        print(f"Exception 2: An error occurred in identification : {str(e)}")
         return None, None
 
 
@@ -112,7 +106,7 @@ def delete_image_file(file_path):
         else:
             print("Image file not found:", file_path)
     except Exception as e:
-        print(f"An error occurred while deleting image file {file_path}: {str(e)}")
+        print(f"Exception 3: An error occurred while deleting image file {file_path}: {str(e)}")
 
 
 
@@ -215,7 +209,7 @@ class ImageUpload(Resource):
             # ...
         except Exception as e:
             # Code to handle the exception
-            error_message = "An exception occurred in Image Upload : " + str(e)
+            error_message = "Exception 4: An exception occurred in Image Upload : " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response 
@@ -254,7 +248,7 @@ class ImageUploadHindi(Resource):
             else:
                 return response
         except Exception as e:
-            error_message = "An exception occurred: " + str(e)
+            error_message = "Exception 5: An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response
@@ -272,7 +266,7 @@ class ImageUploadTamil(Resource):
             else:
                 return response
         except Exception as e:
-            error_message = "An exception occurred: " + str(e)
+            error_message = "Exception 6: An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response
@@ -288,7 +282,7 @@ class ImageUploadFrench(Resource):
             else:
                 return response
         except Exception as e:
-            error_message = "An exception occurred: " + str(e)
+            error_message = "Exception 7: An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response
@@ -304,7 +298,7 @@ class ImageUploadItalian(Resource):
             else:
                 return response
         except Exception as e:
-            error_message = "An exception occurred: " + str(e)
+            error_message = "Exception 8: An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response
@@ -320,7 +314,7 @@ class ImageUploadKorean(Resource):
             else:
                 return response
         except Exception as e:
-            error_message = "An exception occurred: " + str(e)
+            error_message = "Exception 9: An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response
@@ -336,7 +330,7 @@ class ImageUploadMandarin(Resource):
             else:
                 return response
         except Exception as e:
-            error_message = "An exception occurred: " + str(e)
+            error_message = "Exception 10:An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response
@@ -352,7 +346,7 @@ class ImageUploadJapanese(Resource):
             else:
                 return response
         except Exception as e:
-            error_message = "An exception occurred: " + str(e)
+            error_message = "Exception 11: An exception occurred: " + str(e)
             response = jsonify({'result': 'failure', 'message': error_message})
             response.status_code = 500
             return response
